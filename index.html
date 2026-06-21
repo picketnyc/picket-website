@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Picket — Private Matchmaking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500;1,600&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --navy-deep: #0B0F1A;
+    --navy-dark: #141929;
+    --charcoal: #1E2235;
+    --gold: #C9A96E;
+    --gold-light: #E2C98C;
+    --cream: #F2EDE4;
+    --gold-line: rgba(201, 169, 110, 0.18);
+    --gold-faint: rgba(201, 169, 110, 0.10);
+    --serif: "Cormorant Garamond", Georgia, serif;
+    --sans: "Jost", "Helvetica Neue", sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--navy-deep);
+    color: var(--cream);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.6;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* faint grain overlay */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    pointer-events: none;
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection { background: var(--gold); color: var(--navy-deep); }
+
+  /* ---------- custom cursor ---------- */
+  @media (hover: hover) and (pointer: fine) {
+    body { cursor: none; }
+    a, button, input { cursor: none; }
+    .cursor-dot, .cursor-ring {
+      position: fixed;
+      top: 0; left: 0;
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 10000;
+      transform: translate(-50%, -50%);
+      will-change: transform;
+    }
+    .cursor-dot {
+      width: 8px; height: 8px;
+      background: var(--gold-light);
+    }
+    .cursor-ring {
+      width: 32px; height: 32px;
+      border: 1px solid rgba(201, 169, 110, 0.55);
+      transition: width .3s ease, height .3s ease, border-color .3s ease, background .3s ease;
+    }
+    .cursor-ring.is-hover {
+      width: 56px; height: 56px;
+      border-color: rgba(201, 169, 110, 0.9);
+      background: rgba(201, 169, 110, 0.06);
+    }
+  }
+
+  /* ---------- shared ---------- */
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 48px; }
+  .eyebrow {
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0.32em;
+    text-transform: uppercase;
+    color: var(--gold);
+  }
+  .rule-h {
+    width: 64px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    margin: 0 auto;
+  }
+  h1, h2, h3, .serif { font-family: var(--serif); font-weight: 300; }
+  .gold { color: var(--gold); }
+  .gold-i { color: var(--gold); font-style: italic; }
+
+  section { position: relative; }
+
+  /* ---------- reveal ---------- */
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity 1s cubic-bezier(.16,.84,.44,1), transform 1s cubic-bezier(.16,.84,.44,1); }
+  .reveal.in { opacity: 1; transform: none; }
+
+  /* ---------- nav ---------- */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0;
+    z-index: 9000;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 26px 48px;
+    transition: padding .4s ease, background .4s ease, border-color .4s ease;
+    border-bottom: 1px solid transparent;
+  }
+  .nav.scrolled {
+    padding: 18px 48px;
+    background: rgba(11, 15, 26, 0.78);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--gold-line);
+  }
+  .brand {
+    font-family: var(--serif);
+    font-size: 28px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--cream);
+    text-decoration: none;
+  }
+  .brand span { color: var(--gold); }
+  .nav-links { display: flex; align-items: center; gap: 42px; }
+  .nav-link {
+    position: relative;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--cream);
+    text-decoration: none;
+    padding-bottom: 4px;
+  }
+  .nav-link::after {
+    content: "";
+    position: absolute; left: 0; bottom: 0;
+    width: 100%; height: 1px;
+    background: var(--gold);
+    transform: scaleX(0); transform-origin: left;
+    transition: transform .45s cubic-bezier(.16,.84,.44,1);
+  }
+  .nav-link:hover::after { transform: scaleX(1); }
+
+  .btn {
+    font-family: var(--sans);
+    font-size: 13px; font-weight: 400;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    text-decoration: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: none; background: none;
+  }
+  /* outlined gold with fill sweep */
+  .btn-ghost {
+    position: relative;
+    color: var(--gold-light);
+    border: 1px solid var(--gold);
+    padding: 13px 30px;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  .btn-ghost::before {
+    content: "";
+    position: absolute; inset: 0; z-index: -1;
+    background: var(--gold);
+    transform: translateY(101%);
+    transition: transform .5s cubic-bezier(.16,.84,.44,1);
+  }
+  .btn-ghost:hover { color: var(--navy-deep); }
+  .btn-ghost:hover::before { transform: translateY(0); }
+
+  .btn-solid {
+    position: relative;
+    color: var(--navy-deep);
+    background: var(--gold);
+    padding: 16px 38px;
+    transition: transform .4s cubic-bezier(.16,.84,.44,1), box-shadow .4s ease, background .4s ease;
+  }
+  .btn-solid:hover {
+    transform: translateY(-3px);
+    background: var(--gold-light);
+  }
+
+  .nav-apply { padding: 11px 26px; }
+
+  /* ---------- hero ---------- */
+  .hero {
+    min-height: 100vh;
+    display: flex; align-items: center;
+    padding: 140px 0 80px;
+    overflow: hidden;
+  }
+  .hero-vlines {
+    position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  }
+  .hero-vlines span {
+    position: absolute; top: 0; bottom: 0; width: 1px;
+    background: linear-gradient(180deg, transparent, var(--gold-line) 30%, var(--gold-line) 70%, transparent);
+  }
+  .hero-inner { position: relative; z-index: 2; max-width: 1000px; }
+  .hero-eyebrow { margin-bottom: 38px; }
+  .hero h1 {
+    font-size: clamp(48px, 7.2vw, 94px);
+    line-height: 1.02;
+    font-weight: 300;
+    letter-spacing: -0.01em;
+    margin-bottom: 36px;
+    text-wrap: balance;
+  }
+  .hero h1 em { font-style: italic; color: var(--gold); }
+  .hero-sub {
+    max-width: 620px;
+    font-size: 18px;
+    font-weight: 300;
+    line-height: 1.7;
+    color: rgba(242, 237, 228, 0.72);
+    margin-bottom: 46px;
+  }
+  .hero-cta { display: flex; gap: 18px; flex-wrap: wrap; }
+
+  .hero-badge {
+    position: absolute;
+    right: 48px; bottom: 72px;
+    z-index: 2;
+    text-align: right;
+    max-width: 280px;
+  }
+  .hero-badge .q {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: 21px;
+    line-height: 1.4;
+    color: rgba(242, 237, 228, 0.82);
+    margin-bottom: 16px;
+  }
+  .hero-badge .loc {
+    font-size: 11px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold);
+  }
+
+  /* hero stagger */
+  .hero-load { opacity: 0; transform: translateY(32px); animation: heroUp 1.1s cubic-bezier(.16,.84,.44,1) forwards; }
+  @keyframes heroUp { to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) {
+    .hero-load { opacity: 1; transform: none; animation: none; }
+    .reveal { opacity: 1; transform: none; }
+  }
+
+  /* ---------- philosophy ---------- */
+  .philosophy {
+    background: var(--navy-dark);
+    text-align: center;
+    padding: 150px 0;
+  }
+  .philosophy .inner { max-width: 880px; margin: 0 auto; }
+  .philosophy blockquote {
+    font-family: var(--serif);
+    font-size: clamp(30px, 4vw, 52px);
+    line-height: 1.22;
+    font-weight: 300;
+    margin: 44px 0 40px;
+    text-wrap: balance;
+  }
+  .philosophy blockquote em { font-style: italic; color: var(--gold); }
+  .philosophy .sub {
+    max-width: 620px; margin: 0 auto;
+    font-size: 17px; line-height: 1.75;
+    color: rgba(242, 237, 228, 0.62);
+  }
+
+  /* ---------- why grid ---------- */
+  .why { background: var(--navy-deep); padding: 130px 0; }
+  .why-head { margin-bottom: 70px; }
+  .why-head .eyebrow { display: block; margin-bottom: 20px; }
+  .why-head h2 { font-size: clamp(34px, 4.6vw, 58px); line-height: 1.05; max-width: 640px; }
+  .why-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--gold-line);
+    border-left: 1px solid var(--gold-line);
+  }
+  .why-cell {
+    border-right: 1px solid var(--gold-line);
+    border-bottom: 1px solid var(--gold-line);
+    padding: 48px 44px 56px;
+    transition: background .5s ease;
+  }
+  .why-cell:hover { background: rgba(201, 169, 110, 0.035); }
+  .why-num {
+    font-family: var(--serif);
+    font-size: 22px; font-style: italic;
+    color: var(--gold);
+    margin-bottom: 26px;
+  }
+  .why-cell h3 { font-size: 28px; line-height: 1.15; margin-bottom: 16px; font-weight: 400; }
+  .why-cell p { font-size: 15px; line-height: 1.7; color: rgba(242, 237, 228, 0.6); }
+
+  /* ---------- vetting ---------- */
+  .vetting { background: var(--charcoal); padding: 140px 0; }
+  .vetting-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: start; }
+  .vetting h2 { font-size: clamp(36px, 4.6vw, 60px); line-height: 1.05; margin-top: 22px; }
+  .vetting .body { font-size: 18px; line-height: 1.8; color: rgba(242, 237, 228, 0.7); margin-bottom: 38px; }
+  .pills { display: flex; flex-wrap: wrap; gap: 12px; }
+  .pill {
+    font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--gold-light);
+    border: 1px solid var(--gold-line);
+    padding: 10px 18px;
+    transition: border-color .4s ease, color .4s ease;
+  }
+  .pill:hover { border-color: var(--gold); color: var(--gold); }
+
+  /* ---------- how it works ---------- */
+  .how { background: var(--navy-deep); padding: 140px 0; }
+  .how-head { text-align: center; margin-bottom: 80px; }
+  .how-head .eyebrow { display: block; margin-bottom: 20px; }
+  .how-head h2 { font-size: clamp(36px, 4.6vw, 60px); }
+  .how-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+  .how-step { padding: 0 30px; position: relative; }
+  .how-step:not(:last-child)::after {
+    content: ""; position: absolute; top: 8px; right: 0; bottom: 0; width: 1px;
+    background: var(--gold-line);
+  }
+  .how-step:first-child { padding-left: 0; }
+  .how-num {
+    font-family: var(--serif);
+    font-size: 76px; font-weight: 300;
+    line-height: 1;
+    color: rgba(201, 169, 110, 0.22);
+    margin-bottom: 24px;
+  }
+  .how-step h3 { font-size: 25px; line-height: 1.2; margin-bottom: 14px; font-weight: 400; }
+  .how-step p { font-size: 15px; line-height: 1.7; color: rgba(242, 237, 228, 0.6); }
+
+  /* ---------- membership ---------- */
+  .membership { background: var(--navy-dark); padding: 140px 0; }
+  .mem-head { text-align: center; margin-bottom: 72px; }
+  .mem-head .eyebrow { display: block; margin-bottom: 20px; }
+  .mem-head h2 { font-size: clamp(36px, 4.6vw, 60px); margin-bottom: 18px; }
+  .mem-head .sub { max-width: 560px; margin: 0 auto; font-size: 16px; line-height: 1.7; color: rgba(242, 237, 228, 0.6); }
+  .mem-grid {
+    display: grid; grid-template-columns: 1fr 1px 1fr;
+    max-width: 980px; margin: 0 auto;
+  }
+  .mem-divider { background: linear-gradient(180deg, transparent, var(--gold-line) 20%, var(--gold-line) 80%, transparent); }
+  .mem-col { padding: 24px 56px; }
+  .mem-col .label { font-size: 12px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--gold); margin-bottom: 22px; }
+  .mem-price { display: flex; align-items: baseline; gap: 14px; margin-bottom: 6px; }
+  .mem-price .amt { font-family: var(--serif); font-size: 64px; font-weight: 300; line-height: 1; }
+  .mem-price .term { font-size: 14px; color: rgba(242, 237, 228, 0.55); letter-spacing: 0.04em; }
+  .mem-col .note { font-size: 14px; color: rgba(242, 237, 228, 0.5); margin-bottom: 34px; }
+  .mem-feats { list-style: none; margin-bottom: 40px; }
+  .mem-feats li {
+    font-size: 15px; line-height: 1.5; color: rgba(242, 237, 228, 0.78);
+    padding: 14px 0 14px 26px; position: relative;
+    border-bottom: 1px solid rgba(201, 169, 110, 0.08);
+  }
+  .mem-feats li::before {
+    content: ""; position: absolute; left: 0; top: 21px;
+    width: 6px; height: 6px; background: var(--gold);
+    transform: rotate(45deg);
+  }
+  .mem-col .btn { width: 100%; }
+
+  /* ---------- testimonials ---------- */
+  .testi { background: var(--charcoal); padding: 140px 0; }
+  .testi-grid { display: grid; grid-template-columns: 1fr 1px 1fr; max-width: 1080px; margin: 0 auto; }
+  .testi-col { padding: 0 60px; }
+  .testi-mark {
+    font-family: var(--serif); font-size: 110px; line-height: 0.6; color: rgba(201, 169, 110, 0.22);
+    height: 56px; display: block;
+  }
+  .testi-col blockquote {
+    font-family: var(--serif); font-style: italic; font-weight: 300;
+    font-size: clamp(22px, 2.4vw, 30px); line-height: 1.4;
+    margin: 30px 0 34px; text-wrap: pretty;
+  }
+  .testi-attr { font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); }
+  .testi-divider { background: linear-gradient(180deg, transparent, var(--gold-line) 20%, var(--gold-line) 80%, transparent); }
+
+  /* ---------- cta ---------- */
+  .cta { background: var(--charcoal); padding: 150px 0 160px; text-align: center; border-top: 1px solid var(--gold-faint); }
+  .cta .eyebrow { display: block; margin-bottom: 26px; }
+  .cta h2 { font-size: clamp(38px, 5.4vw, 72px); line-height: 1.05; max-width: 880px; margin: 0 auto 50px; text-wrap: balance; }
+  .cta h2 em { font-style: italic; color: var(--gold); }
+  .apply-box {
+    display: flex; align-items: stretch; max-width: 560px; margin: 0 auto 22px;
+    border: 1px solid var(--gold); 
+  }
+  .apply-box input {
+    flex: 1; background: transparent; border: none; outline: none;
+    color: var(--cream); font-family: var(--sans); font-size: 15px; font-weight: 300;
+    padding: 0 24px; letter-spacing: 0.02em;
+  }
+  .apply-box input::placeholder { color: rgba(242, 237, 228, 0.4); }
+  .apply-box button {
+    background: var(--gold); color: var(--navy-deep);
+    border: none; font-family: var(--sans); font-size: 13px; font-weight: 400;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    padding: 18px 36px; transition: background .4s ease;
+  }
+  .apply-box button:hover { background: var(--gold-light); }
+  .apply-box.ok { border-color: var(--gold-light); }
+  .cta .fine { font-size: 13px; letter-spacing: 0.08em; color: rgba(242, 237, 228, 0.45); }
+
+  /* ---------- footer ---------- */
+  .footer { background: var(--navy-deep); border-top: 1px solid var(--gold-line); padding: 40px 0; }
+  .footer-inner { display: flex; align-items: center; justify-content: space-between; gap: 30px; }
+  .footer .brand { font-size: 22px; }
+  .footer-nav { display: flex; gap: 32px; }
+  .footer-nav a { font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(242, 237, 228, 0.6); text-decoration: none; transition: color .3s ease; }
+  .footer-nav a:hover { color: var(--gold); }
+  .footer .copy { font-size: 12px; letter-spacing: 0.08em; color: rgba(242, 237, 228, 0.4); }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 940px) {
+    .wrap { padding: 0 28px; }
+    .nav { padding: 20px 28px; }
+    .nav.scrolled { padding: 14px 28px; }
+    .nav-links { gap: 22px; }
+    .nav-link:not(.nav-apply) { display: none; }
+    .why-grid { grid-template-columns: 1fr 1fr; }
+    .vetting-grid { grid-template-columns: 1fr; gap: 36px; }
+    .how-grid { grid-template-columns: 1fr 1fr; gap: 50px 30px; }
+    .how-step::after { display: none; }
+    .hero-badge { position: static; text-align: left; margin-top: 60px; max-width: 100%; }
+    .mem-grid, .testi-grid { grid-template-columns: 1fr; }
+    .mem-divider, .testi-divider { height: 1px; width: 100%; background: var(--gold-line); margin: 20px 0; }
+    .mem-col, .testi-col { padding: 30px 0; }
+    .footer-inner { flex-direction: column; text-align: center; }
+  }
+  @media (max-width: 560px) {
+    .why-grid { grid-template-columns: 1fr; }
+    .how-grid { grid-template-columns: 1fr; }
+    .hero-cta { flex-direction: column; }
+    .hero-cta .btn { width: 100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor-ring" aria-hidden="true"></div>
+<div class="cursor-dot" aria-hidden="true"></div>
+
+<!-- ============ NAV ============ -->
+<nav class="nav" id="nav">
+  <a href="#top" class="brand">Picket<span>.</span></a>
+  <div class="nav-links">
+    <a href="#how" class="nav-link">How It Works</a>
+    <a href="#membership" class="nav-link">Membership</a>
+    <a href="#philosophy" class="nav-link">About</a>
+    <a href="https://form.typeform.com/to/TgIaeEBZ" target="_blank" rel="noopener noreferrer" class="btn btn-ghost nav-apply" data-cursor>Apply</a>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<header class="hero" id="top">
+  <div class="hero-vlines" id="vlines"></div>
+  <div class="wrap">
+    <div class="hero-inner">
+      <div class="eyebrow hero-eyebrow hero-load" style="animation-delay:.1s">New York City · Invite Only · Est. 2025</div>
+      <h1 class="hero-load" style="animation-delay:.25s">Start <em>living the dream</em> with the right person</h1>
+      <p class="hero-sub hero-load" style="animation-delay:.45s">Not an app. Not an algorithm. A curated, confidential matchmaking service built for those who take love as seriously as everything else they've achieved.</p>
+      <div class="hero-cta hero-load" style="animation-delay:.6s">
+        <a href="https://form.typeform.com/to/TgIaeEBZ" target="_blank" rel="noopener noreferrer" class="btn btn-solid" data-cursor>Request an Introduction</a>
+        <a href="#how" class="btn btn-ghost" data-cursor>How It Works</a>
+      </div>
+    </div>
+  </div>
+  <div class="hero-badge hero-load" style="animation-delay:.85s">
+    <div class="q">"The right match is not found. It is made."</div>
+    <div class="loc">New York City · Miami Coming Soon</div>
+  </div>
+</header>
+
+<!-- ============ PHILOSOPHY ============ -->
+<section class="philosophy" id="philosophy">
+  <div class="wrap">
+    <div class="inner">
+      <div class="rule-h reveal"></div>
+      <blockquote class="reveal" style="transition-delay:.1s">You built your career with intention. Your network with care. Your home with taste. <em>Your relationship deserves the same.</em></blockquote>
+      <p class="sub reveal" style="transition-delay:.2s">Picket is an invite-only matchmaking service — not a dating app. No swiping. No ghosting. No wondering why the algorithm keeps failing you. Just two people, thoughtfully matched by a human team that actually understands them.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHY PICKET ============ -->
+<section class="why">
+  <div class="wrap">
+    <div class="why-head reveal">
+      <span class="eyebrow">Why Picket</span>
+      <h2>A different standard for how people meet.</h2>
+    </div>
+    <div class="why-grid">
+      <div class="why-cell reveal">
+        <div class="why-num">i.</div>
+        <h3>No algorithms.</h3>
+        <p>Every match is made by hand. Human nuance reads what data never could — chemistry, values, the things between the lines.</p>
+      </div>
+      <div class="why-cell reveal" style="transition-delay:.06s">
+        <div class="why-num">ii.</div>
+        <h3>Fully verified members.</h3>
+        <p>Identity, career, and location are confirmed before anyone receives an introduction. You always know who is in the room.</p>
+      </div>
+      <div class="why-cell reveal" style="transition-delay:.12s">
+        <div class="why-num">iii.</div>
+        <h3>Absolute discretion.</h3>
+        <p>No public profiles. No searchable database. Privacy is the default, never a setting you have to find and switch on.</p>
+      </div>
+      <div class="why-cell reveal">
+        <div class="why-num">iv.</div>
+        <h3>No swiping. No rejecting.</h3>
+        <p>One thoughtful introduction at a time. No endless scroll, no bad likes, no being reduced to a photo on a grid.</p>
+      </div>
+      <div class="why-cell reveal" style="transition-delay:.06s">
+        <div class="why-num">v.</div>
+        <h3>Women join free.</h3>
+        <p>No barriers for women. Qualified men pay a membership fee — a simple filter that ensures everyone here is serious.</p>
+      </div>
+      <div class="why-cell reveal" style="transition-delay:.12s">
+        <div class="why-num">vi.</div>
+        <h3>Concierge support.</h3>
+        <p>Our team is with you from the first consultation through the third date — present when you need them, invisible when you don't.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ VETTING ============ -->
+<section class="vetting">
+  <div class="wrap">
+    <div class="vetting-grid">
+      <div class="reveal">
+        <span class="eyebrow">Our Standard</span>
+        <h2>The peace of mind you deserve, built into every introduction.</h2>
+      </div>
+      <div class="reveal" style="transition-delay:.12s">
+        <p class="body">Before anyone receives an introduction, our team personally verifies the details that matter. Not just who you say you are — but where you live, what you do, and that you are who you claim to be. Every member passes the same standard, no exceptions.</p>
+        <div class="pills">
+          <span class="pill" data-cursor>Identity</span>
+          <span class="pill" data-cursor>Career &amp; Employer</span>
+          <span class="pill" data-cursor>Location</span>
+          <span class="pill" data-cursor>LinkedIn</span>
+          <span class="pill" data-cursor>Social Media</span>
+          <span class="pill" data-cursor>Phone &amp; Email</span>
+          <span class="pill" data-cursor>Intentions &amp; Goals</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW IT WORKS ============ -->
+<section class="how" id="how">
+  <div class="wrap">
+    <div class="how-head reveal">
+      <span class="eyebrow">The Process</span>
+      <h2>How It Works</h2>
+    </div>
+    <div class="how-grid">
+      <div class="how-step reveal">
+        <div class="how-num">01</div>
+        <h3>Apply &amp; Consult</h3>
+        <p>A private application followed by a one-on-one consultation with our team to understand who you are and who you're looking for.</p>
+      </div>
+      <div class="how-step reveal" style="transition-delay:.08s">
+        <div class="how-num">02</div>
+        <h3>Review the Bio</h3>
+        <p>A written profile is shared with no names and no photos. Both parties must approve before anything moves forward.</p>
+      </div>
+      <div class="how-step reveal" style="transition-delay:.16s">
+        <div class="how-num">03</div>
+        <h3>Photos Exchanged</h3>
+        <p>Photos are shared privately, and only after both parties have approved the written bio. Substance first, always.</p>
+      </div>
+      <div class="how-step reveal" style="transition-delay:.24s">
+        <div class="how-num">04</div>
+        <h3>He Plans the Date</h3>
+        <p>The gentleman receives contact information and is expected to arrange a proper first date — promptly and thoughtfully.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MEMBERSHIP ============ -->
+<section class="membership" id="membership">
+  <div class="wrap">
+    <div class="mem-head reveal">
+      <span class="eyebrow">Membership</span>
+      <h2>Invest in what matters.</h2>
+      <p class="sub">Picket is invite-only and built on commitment. The terms are simple, and they exist to protect the seriousness of everyone in the room.</p>
+    </div>
+    <div class="mem-grid reveal" style="transition-delay:.1s">
+      <div class="mem-col">
+        <div class="label">For Women</div>
+        <div class="mem-price"><span class="amt gold">$0</span><span class="term">Complimentary</span></div>
+        <div class="note">Full membership, no fees, ever.</div>
+        <ul class="mem-feats">
+          <li>Full access with no fees</li>
+          <li>Identity &amp; location verified</li>
+          <li>Anonymous bio &amp; photo review</li>
+          <li>Human-curated introductions</li>
+          <li>Concierge support throughout</li>
+        </ul>
+        <a href="https://form.typeform.com/to/TgIaeEBZ" target="_blank" rel="noopener noreferrer" class="btn btn-ghost" data-cursor>Apply Now</a>
+      </div>
+      <div class="mem-divider"></div>
+      <div class="mem-col">
+        <div class="label">For Men</div>
+        <div class="mem-price"><span class="amt gold">$995</span><span class="term">One-time membership fee</span></div>
+        <div class="note">Acceptance-based. Not open to all.</div>
+        <ul class="mem-feats">
+          <li>Acceptance-based, not open to all</li>
+          <li>Identity, career &amp; location verified</li>
+          <li>Anonymous bio &amp; photo review</li>
+          <li>Human-curated introductions</li>
+          <li>Concierge dating consultation available</li>
+        </ul>
+        <a href="https://form.typeform.com/to/TgIaeEBZ" target="_blank" rel="noopener noreferrer" class="btn btn-solid" data-cursor>Request Membership</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TESTIMONIALS ============ -->
+<section class="testi">
+  <div class="wrap">
+    <div class="testi-grid">
+      <div class="testi-col reveal">
+        <span class="testi-mark">&ldquo;</span>
+        <blockquote>After years of apps that made me feel like a commodity, Picket was different. I never once felt like I was being judged by a photo or a swipe. They actually knew me.</blockquote>
+        <div class="testi-attr">Member, West Village · 34</div>
+      </div>
+      <div class="testi-divider"></div>
+      <div class="testi-col reveal" style="transition-delay:.12s">
+        <span class="testi-mark">&ldquo;</span>
+        <blockquote>The process felt respectful from day one. I knew she had agreed to learn about me before I ever reached out. That context made all the difference.</blockquote>
+        <div class="testi-attr">Member, Williamsburg · 38</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="cta" id="apply">
+  <div class="wrap">
+    <span class="eyebrow reveal">Begin Your Journey</span>
+    <h2 class="reveal" style="transition-delay:.08s">The life you built deserves <em>someone worthy</em> of it.</h2>
+    <form class="apply-box reveal" id="applyForm" style="transition-delay:.16s">
+      <input type="email" id="applyEmail" placeholder="Your email address" required />
+      <button type="submit" data-cursor>Apply</button>
+    </form>
+    <p class="fine reveal" id="applyNote" style="transition-delay:.22s">Invite-only. All applications are reviewed by our team.</p>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer">
+  <div class="wrap">
+    <div class="footer-inner">
+      <a href="#top" class="brand">Picket<span>.</span></a>
+      <nav class="footer-nav">
+        <a href="#how">How It Works</a>
+        <a href="#membership">Membership</a>
+        <a href="#philosophy">About</a>
+        <a href="https://form.typeform.com/to/TgIaeEBZ" target="_blank" rel="noopener noreferrer">Apply</a>
+      </nav>
+      <div class="copy">© 2026 Picket. New York City. By invitation only.</div>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  /* ---------- custom cursor ---------- */
+  var fine = window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+  if (fine) {
+    var dot = document.querySelector(".cursor-dot");
+    var ring = document.querySelector(".cursor-ring");
+    var mx = window.innerWidth / 2, my = window.innerHeight / 2;
+    var rx = mx, ry = my;
+    window.addEventListener("mousemove", function (e) {
+      mx = e.clientX; my = e.clientY;
+      dot.style.transform = "translate(" + mx + "px," + my + "px) translate(-50%,-50%)";
+    });
+    function loop() {
+      rx += (mx - rx) * 0.16;
+      ry += (my - ry) * 0.16;
+      ring.style.transform = "translate(" + rx + "px," + ry + "px) translate(-50%,-50%)";
+      requestAnimationFrame(loop);
+    }
+    loop();
+    var hov = document.querySelectorAll("a, button, input, [data-cursor]");
+    hov.forEach(function (el) {
+      el.addEventListener("mouseenter", function () { ring.classList.add("is-hover"); });
+      el.addEventListener("mouseleave", function () { ring.classList.remove("is-hover"); });
+    });
+  }
+
+  /* ---------- nav scroll state ---------- */
+  var nav = document.getElementById("nav");
+  function onScroll() {
+    if (window.scrollY > 40) nav.classList.add("scrolled");
+    else nav.classList.remove("scrolled");
+  }
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  /* ---------- hero vertical lines ---------- */
+  var vl = document.getElementById("vlines");
+  var positions = [12, 38, 62, 88];
+  positions.forEach(function (p) {
+    var s = document.createElement("span");
+    s.style.left = p + "%";
+    vl.appendChild(s);
+  });
+
+  /* ---------- scroll reveal ---------- */
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (en) {
+      if (en.isIntersecting) {
+        en.target.classList.add("in");
+        io.unobserve(en.target);
+      }
+    });
+  }, { threshold: 0.14, rootMargin: "0px 0px -8% 0px" });
+  document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
+
+  /* ---------- apply form ---------- */
+  var form = document.getElementById("applyForm");
+  var note = document.getElementById("applyNote");
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = document.getElementById("applyEmail").value.trim();
+    if (!email) return;
+    form.classList.add("ok");
+    form.innerHTML = '<div style="flex:1;padding:18px 24px;color:var(--gold-light);font-size:15px;letter-spacing:0.04em;">Thank you. Your application is in review.</div>';
+    note.textContent = "We will be in touch privately. Discretion guaranteed.";
+  });
+})();
+</script>
+</body>
+</html>
