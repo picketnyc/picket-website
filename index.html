@@ -736,10 +736,16 @@
   var note = document.getElementById("applyNote");
   form.addEventListener("submit", function (e) {
     e.preventDefault();
-    var email = document.getElementById("applyEmail").value.trim();
+    var emailInput = document.getElementById("applyEmail");
+    var email = emailInput.value.trim();
     if (!email) return;
+    fetch("https://hooks.zapier.com/hooks/catch/28009480/42dhc0r/", {
+      method: "POST",
+      body: JSON.stringify({ email: email })
+    }).catch(function () {});
+    emailInput.value = "";
     form.classList.add("ok");
-    form.innerHTML = '<div style="flex:1;padding:18px 24px;color:var(--gold-light);font-size:15px;letter-spacing:0.04em;">Thank you. Your application is in review.</div>';
+    form.innerHTML = '<div style="flex:1;padding:18px 24px;color:var(--gold-light);font-size:15px;letter-spacing:0.04em;">You’re on the list. Expect to hear from us soon.</div>';
     note.textContent = "We will be in touch privately. Discretion guaranteed.";
   });
 })();
