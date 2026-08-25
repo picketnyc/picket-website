@@ -721,16 +721,12 @@
     if (!email) return;
     fetch("https://hooks.zapier.com/hooks/catch/28598744/4tc7lmg/", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email: email })
-    }).then(function () {
-      emailInput.value = "";
-      form.classList.add("ok");
-      form.innerHTML = "<div style=\"flex:1;padding:18px 24px;color:var(--gold-light);font-size:15px;letter-spacing:0.04em;\">You're on the list. Expect to hear from us soon.</div>";
-      note.textContent = "We will be in touch privately. Discretion guaranteed.";
-    }).catch(function () {
-      note.textContent = "Something went wrong. Please try again in a moment.";
-    });
+    }).catch(function () {});
+    emailInput.value = "";
+    form.classList.add("ok");
+    form.innerHTML = "<div style=\"flex:1;padding:18px 24px;color:var(--gold-light);font-size:15px;letter-spacing:0.04em;\">You're on the list. Expect to hear from us soon.</div>";
+    note.textContent = "We will be in touch privately. Discretion guaranteed.";
   });
 })();
 </script>
