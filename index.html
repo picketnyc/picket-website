@@ -398,6 +398,37 @@
   .apply-box.ok { border-color: var(--gold-light); }
   .cta .fine { font-size: 13px; letter-spacing: 0.08em; color: rgba(242, 237, 228, 0.45); }
 
+  /* ---------- pool form ---------- */
+  .pool-body { font-family: var(--sans); font-size: 16px; font-weight: 300; line-height: 1.75; color: rgba(242, 237, 228, 0.7); max-width: 640px; margin: 0 auto 52px; letter-spacing: 0.01em; }
+  .pool-form { max-width: 560px; margin: 0 auto; text-align: left; }
+  .pool-field { margin-bottom: 20px; }
+  .pool-field label { display: block; font-family: var(--sans); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: rgba(242, 237, 228, 0.5); margin-bottom: 8px; }
+  .pool-field input[type="text"],
+  .pool-field input[type="email"],
+  .pool-field select {
+    width: 100%; background: transparent; border: 1px solid rgba(201, 169, 110, 0.35);
+    color: var(--cream); font-family: var(--sans); font-size: 15px; font-weight: 300;
+    padding: 14px 18px; letter-spacing: 0.02em; outline: none;
+    transition: border-color .3s ease; -webkit-appearance: none; appearance: none; box-sizing: border-box;
+  }
+  .pool-field input[type="text"]:focus,
+  .pool-field input[type="email"]:focus,
+  .pool-field select:focus { border-color: var(--gold); }
+  .pool-field input::placeholder { color: rgba(242, 237, 228, 0.3); }
+.pool-check { display: flex; gap: 14px; align-items: flex-start; margin: 28px 0 32px; }
+  .pool-check input[type="checkbox"] { flex: 0 0 18px; width: 18px; height: 18px; margin-top: 3px; accent-color: var(--gold); cursor: pointer; }
+  .pool-check label { font-family: var(--sans); font-size: 13px; font-weight: 300; line-height: 1.65; color: rgba(242, 237, 228, 0.6); letter-spacing: 0.02em; cursor: pointer; }
+  .pool-submit { width: 100%; background: var(--gold); color: var(--navy-deep); border: none; font-family: var(--sans); font-size: 13px; font-weight: 400; letter-spacing: 0.16em; text-transform: uppercase; padding: 18px 36px; transition: background .4s ease; cursor: pointer; }
+  .pool-submit:hover:not(:disabled) { background: var(--gold-light); }
+  .pool-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .pool-fine { font-size: 13px; letter-spacing: 0.08em; color: rgba(242, 237, 228, 0.4); margin-top: 18px; text-align: center; }
+  .pool-error { color: #d97070; font-family: var(--sans); font-size: 13px; letter-spacing: 0.04em; margin-top: 14px; display: none; }
+  .pool-success { color: var(--gold-light); font-family: var(--sans); font-size: 18px; letter-spacing: 0.04em; line-height: 1.6; padding: 48px 0 24px; }
+  .pool-membership { margin-top: 36px; font-family: var(--sans); font-size: 13px; letter-spacing: 0.08em; color: rgba(242, 237, 228, 0.45); }
+  .pool-membership a { color: var(--gold); text-decoration: none; transition: color .3s ease; }
+  .pool-membership a:hover { color: var(--gold-light); }
+  .pool-honeypot { position: absolute; left: -9999px; opacity: 0; height: 0; overflow: hidden; pointer-events: none; }
+
   /* ---------- footer ---------- */
   .footer { background: var(--navy-deep); border-top: 1px solid var(--gold-line); padding: 48px 0; }
   .footer-row { display: flex; align-items: center; justify-content: space-between; gap: 32px; }
@@ -624,13 +655,33 @@
 <!-- ============ CTA ============ -->
 <section class="cta" id="apply">
   <div class="wrap">
-    <span class="eyebrow reveal">Begin Your Journey</span>
-    <h2 class="reveal" style="transition-delay:.08s">The life you built deserves <em>someone worthy</em> of it.</h2>
-    <form class="apply-box reveal" id="applyForm" style="transition-delay:.16s">
-      <input type="email" id="applyEmail" placeholder="Your email address" required />
-      <button type="submit" data-cursor>I'm Interested</button>
-    </form>
-    <p class="fine reveal" id="applyNote" style="transition-delay:.22s">Applications are open. All submissions are reviewed by our team.</p>
+    <span class="eyebrow reveal">Not ready to apply?</span>
+    <h2 class="reveal" style="transition-delay:.08s">Join the <em>pool.</em></h2>
+    <p class="pool-body reveal" style="transition-delay:.12s">Membership is how we actively work for you: a curated process, personal introductions, and a fee. It isn't for everyone, and it doesn't have to be. If you'd like to be considered without becoming a member, you can join our introduction pool for free. We'll send you a short follow-up email with a few details. After that, you'll be kept in mind when we're matching our members. If someone in the pool looks like a strong fit for a member, we may reach out to you about an introduction.</p>
+    <div id="poolFormWrap">
+      <form class="pool-form reveal" id="poolForm" style="transition-delay:.16s" novalidate>
+        <div class="pool-honeypot" aria-hidden="true">
+          <label for="poolWebsite">Website</label>
+          <input type="text" id="poolWebsite" name="website" tabindex="-1" autocomplete="off" />
+        </div>
+        <div class="pool-field">
+          <label for="poolFirstName">First name <span aria-hidden="true">*</span></label>
+          <input type="text" id="poolFirstName" name="first_name" placeholder="Your first name" required autocomplete="given-name" />
+        </div>
+        <div class="pool-field">
+          <label for="poolEmail">Email <span aria-hidden="true">*</span></label>
+          <input type="email" id="poolEmail" name="email" placeholder="Your email address" required autocomplete="email" />
+        </div>
+        <div class="pool-check">
+          <input type="checkbox" id="poolAgree" name="agree" required />
+          <label for="poolAgree">I understand that joining the pool is free, doesn't guarantee a match or introduction, and that Picket won't actively search for matches on my behalf.</label>
+        </div>
+        <button type="submit" class="pool-submit" id="poolSubmit" data-cursor>Join the pool</button>
+        <div class="pool-error" id="poolError" role="alert" aria-live="assertive" tabindex="-1"></div>
+        <p class="pool-fine">You can ask to be removed at any time. We'll only use your email to contact you about Picket and never sell or share it.</p>
+      </form>
+    </div>
+    <p class="pool-membership reveal" style="transition-delay:.22s">Want us to actively seek out your match? <a href="https://form.typeform.com/to/TgIaeEBZ" target="_blank" rel="noopener noreferrer">Apply for membership →</a></p>
   </div>
 </section>
 
@@ -720,23 +771,41 @@
   }, { threshold: 0.14, rootMargin: "0px 0px -8% 0px" });
   document.querySelectorAll(".reveal").forEach(function (el) { io.observe(el); });
 
-  /* ---------- apply form ---------- */
-  var form = document.getElementById("applyForm");
-  var note = document.getElementById("applyNote");
-  form.addEventListener("submit", function (e) {
-    e.preventDefault();
-    var emailInput = document.getElementById("applyEmail");
-    var email = emailInput.value.trim();
-    if (!email) return;
-    fetch("https://hooks.zapier.com/hooks/catch/28598744/4tc7lmg/", {
-      method: "POST",
-      body: JSON.stringify({ email: email })
-    }).catch(function () {});
-    emailInput.value = "";
-    form.classList.add("ok");
-    form.innerHTML = "<div style=\"flex:1;padding:18px 24px;color:var(--gold-light);font-size:15px;letter-spacing:0.04em;\">You're on the list. Expect to hear from us soon.</div>";
-    note.textContent = "We will be in touch privately. Discretion guaranteed.";
-  });
+  /* ---------- pool form ---------- */
+  var poolForm = document.getElementById("poolForm");
+  if (poolForm) {
+    poolForm.addEventListener("submit", function (e) {
+      e.preventDefault();
+      if (document.getElementById("poolWebsite").value) return;
+      var firstName = document.getElementById("poolFirstName").value.trim();
+      var email = document.getElementById("poolEmail").value.trim();
+      var agree = document.getElementById("poolAgree").checked;
+      var errorEl = document.getElementById("poolError");
+      var submitBtn = document.getElementById("poolSubmit");
+      errorEl.style.display = "none";
+      if (!firstName) { showPoolError("Please enter your first name."); return; }
+      if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showPoolError("Please enter a valid email address."); return; }
+      if (!agree) { showPoolError("Please check the box to continue."); return; }
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Joining…";
+      fetch("https://hooks.zapier.com/hooks/catch/28598744/4tc7lmg/", {
+        method: "POST",
+        body: JSON.stringify({ email: email, first_name: firstName, timestamp: new Date().toISOString() })
+      }).then(function () {
+        document.getElementById("poolFormWrap").innerHTML = "<div class=\"pool-success\" role=\"status\" aria-live=\"polite\">You’re in the pool. Check your inbox for a note from us shortly.</div>";
+      }).catch(function () {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Join the pool";
+        showPoolError("Something went wrong. Please try again.");
+      });
+    });
+    function showPoolError(msg) {
+      var el = document.getElementById("poolError");
+      el.textContent = msg;
+      el.style.display = "block";
+      el.focus();
+    }
+  }
 })();
 </script>
 <script>
